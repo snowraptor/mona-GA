@@ -20,7 +20,7 @@ class Gene():
         else:
             self.mutate_shape(sigma)
     def mutate_rgba(self, sigma):
-        self.rgba = sigma * random.randn(4) + self.rgba
+        self.rgba = sigma * sigma * random.randn(4) + self.rgba
         highlights = self.rgba > 1.0
         self.rgba[highlights] = 1.0
         shadows = self.rgba < 0.0
@@ -75,13 +75,14 @@ def draw_DNA(dna):
 
 
 def delta(test, reference):
-    return 1/average(test - reference)**2
+    return sqrt(sum((test - reference) ** 2))
 
-def pop_fitness(population, reference):
+def pop_fitness(population, reference, max_fitness):
     i = 0
     fitness = []
     for individual in population:
         fit = delta(map(ord,draw_DNA(individual).get_data()), reference)
+        fit = 1 - (fit / max_fitness)
         fitness.append([fit, i])
         i += 1
     return fitness
@@ -96,13 +97,13 @@ def crossover(parent1, parent2):
 
 def mate(population,fitness, mutaterate, sigma):
     roulette = zip(*sorted(fitness, key=lambda fit: fit[0]))
-    max_fitness = sum(roulette[0])
-    newpop = []
+    sum_fitness = sum(roulette[0])
+    newpop = [population[roulette[1][-1]]]
     while len(newpop) < len(population):
         parents = random.choice(roulette[1],
                                  size = 2,
                                  replace = False,
-                                 p = array(roulette[0])/max_fitness)
+                                 p = array(roulette[0])/sum_fitness)
         child = crossover(population[parents[0]], population[parents[1]])
         for i in range(len(child)):
             if random.random() < mutaterate:
@@ -117,7 +118,7 @@ def mate(population,fitness, mutaterate, sigma):
 def output(pop, gen):
     individual = 0
     for i in pop:
-        outfile = 'gen_{}_ind_{}.png'.format(gen, individual)
+        outfile = 'gen_{:05d}_ind_{:02d}.png'.format(gen, individual)
         image = draw_DNA(i)
         with open(outfile, 'w') as out:
             image.write_to_png(out)
@@ -131,20 +132,23 @@ def main():
     numshapes = 100
     numvertices = 3
     mutaterate = 0.1
-    sigma = 0.1
+    sigma = 0.01
     reference, imgshape = read_png("test.png")
 
     population = init_population(popsize, numshapes, numvertices, imgshape)
 
+    max_fitness = delta(ones(len(reference)) * 255, zeros(len(reference)))
     generation = 0
+    output(population, generation)
     while(True):
-        fitness = pop_fitness(population, reference)
+        fitness = pop_fitness(population, reference, max_fitness)
         population = mate(population, fitness, mutaterate, sigma)
         generation += 1
 
         if generation % 10 == 0:
             print("Generation: {}\tMax Fitness: {}".format(generation, max(zip(*fitness)[0])))
-            output(population, generation)
+            if generation % 100 == 0:
+                output(population, generation)
 
 
 main()
