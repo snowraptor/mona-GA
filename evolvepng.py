@@ -20,11 +20,13 @@ class Gene():
         else:
             self.mutate_shape(sigma)
     def mutate_rgba(self, sigma):
-        self.rgba = sigma * sigma * random.randn(4) + self.rgba
+        self.rgba = sigma * random.randn(4) + self.rgba
         highlights = self.rgba > 1.0
         self.rgba[highlights] = 1.0
         shadows = self.rgba < 0.0
         self.rgba[shadows] = 0.0
+        if self.rgba[3] < 0.01:
+            self.rgba[3] += random.poisson(0.01)
     def mutate_shape(self, sigma):
         for i in range(len(self.vertices)):
             self.vertices[i][0] += sigma * random.randn() * self.imgshape[0]
@@ -99,6 +101,7 @@ def mate(population,fitness, mutaterate, sigma):
     roulette = zip(*sorted(fitness, key=lambda fit: fit[0]))
     sum_fitness = sum(roulette[0])
     newpop = [population[roulette[1][-1]]]
+    #newpop = []
     while len(newpop) < len(population):
         parents = random.choice(roulette[1],
                                  size = 2,
@@ -137,7 +140,7 @@ def main():
 
     population = init_population(popsize, numshapes, numvertices, imgshape)
 
-    max_fitness = delta(ones(len(reference)) * 255, zeros(len(reference)))
+    max_fitness = delta(reference, zeros(len(reference)))
     generation = 0
     output(population, generation)
     while(True):
@@ -147,6 +150,7 @@ def main():
 
         if generation % 10 == 0:
             print("Generation: {}\tMax Fitness: {}".format(generation, max(zip(*fitness)[0])))
+            sys.stdout.flush()
             if generation % 100 == 0:
                 output(population, generation)
 
