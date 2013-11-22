@@ -20,14 +20,23 @@ class Gene():
         else:
             self.mutate_shape(sigma)
     def mutate_rgba(self, sigma):
-        self.rgba = sigma * random.randn(4) + rgba
+        self.rgba = sigma * random.randn(4) + self.rgba
         highlights = self.rgba > 1.0
         self.rgba[highlights] = 1.0
         shadows = self.rgba < 0.0
         self.rgba[shadows] = 0.0
     def mutate_shape(self, sigma):
-        pass
-        #TODO
+        for i in range(len(self.vertices)):
+            self.vertices[i][0] += sigma * random.randn() * self.imgshape[0]
+            if self.vertices[i][0] > self.imgshape[0]:
+                self.vertices[i][0] = self.imgshape[0]
+            if self.vertices[i][0] < 0:
+                self.vertices[i][0] = 0
+            self.vertices[i][1] += sigma * random.randn() * self.imgshape[1]
+            if self.vertices[i][1] > self.imgshape[1]:
+                self.vertices[i][1] = self.imgshape[1]
+            if self.vertices[i][1] < 0:
+                self.vertices[i][1] = 0
 
 def read_png(pngfile):
     with open(pngfile, 'r') as png:
@@ -38,27 +47,27 @@ def read_png(pngfile):
     return array(map(ord,surface.get_data())), imgshape
 
 def init_population(popsize, numshapes, numvertices, imgshape):
-    species = []
+    population = []
     for i in range(popsize):
         dna = []
         for shape in range(numshapes):
             dna.append(Gene(numvertices, imgshape))
-        species.append(dna)
-    return species
+        population.append(dna)
+    return population
 
 def draw_shape(gene, ctx):
     ctx.set_source_rgba(*gene.rgba) # Solid color
-    ctx.set_line_width (0)
+    ctx.set_line_width(0)
     ctx.move_to(*gene.vertices[0])
     for vertex in gene.vertices[1:]:
         ctx.line_to(*vertex)
     ctx.fill()
 
 def draw_DNA(dna):
-    surface = cairo.ImageSurface (cairo.FORMAT_RGB24, width, height)
-    ctx = cairo.Context (surface)
+    surface = cairo.ImageSurface(cairo.FORMAT_RGB24, dna[0].imgshape[0],  dna[0].imgshape[1])
+    ctx = cairo.Context(surface)
     ctx.set_source_rgb(1, 1, 1)
-    ctx.retangle(0, 0, width, height)
+    ctx.rectangle(0, 0, dna[0].imgshape[0],  dna[0].imgshape[1])
     ctx.fill()
     for gene in dna:
         draw_shape(gene,ctx)
@@ -66,42 +75,76 @@ def draw_DNA(dna):
 
 
 def delta(test, reference):
-    return average(test - reference)**2
+    return 1/average(test - reference)**2
 
 def pop_fitness(population, reference):
     i = 0
     fitness = []
-    for indivudual in population:
-        fit = delta(map(ord,draw_DNA(individual)), reference)
-        fitness.append([delta, i])
+    for individual in population:
+        fit = delta(map(ord,draw_DNA(individual).get_data()), reference)
+        fitness.append([fit, i])
         i += 1
+    return fitness
+
+def crossover(parent1, parent2):
+    cut = random.randint(0, len(parent1))
+    child = parent1[0:cut]
+    child.extend(parent2[cut:])
+    return child
 
 
-def rouletewheel(fitness):
 
-    pass
-    #TODO
+def mate(population,fitness, mutaterate, sigma):
+    roulette = zip(*sorted(fitness, key=lambda fit: fit[0]))
+    max_fitness = sum(roulette[0])
+    newpop = []
+    while len(newpop) < len(population):
+        parents = random.choice(roulette[1],
+                                 size = 2,
+                                 replace = False,
+                                 p = array(roulette[0])/max_fitness)
+        child = crossover(population[parents[0]], population[parents[1]])
+        for i in range(len(child)):
+            if random.random() < mutaterate:
+                child[i].mutate(sigma)
+
+        if random.random() < mutaterate:
+            swap = random.randint(0, len(child), size = 2)
+            child[swap[0]], child[swap[1]] = child[swap[1]], child[swap[0]]
+        newpop.append(child)
+    return newpop
+
+def output(pop, gen):
+    individual = 0
+    for i in pop:
+        outfile = 'gen_{}_ind_{}.png'.format(gen, individual)
+        image = draw_DNA(i)
+        with open(outfile, 'w') as out:
+            image.write_to_png(out)
+        individual += 1
 
 
 
 #surface.write_to_png ("from_DNA.png") # Output to PNG
 def main():
     popsize = 20
-    numshapes = 1000
-    numvertices=3
+    numshapes = 100
+    numvertices = 3
+    mutaterate = 0.1
+    sigma = 0.1
     reference, imgshape = read_png("test.png")
 
     population = init_population(popsize, numshapes, numvertices, imgshape)
 
-    sys.exit()
     generation = 0
     while(True):
         fitness = pop_fitness(population, reference)
-        keep = rouletewheel(fitness)
-        population = mate(keep)
+        population = mate(population, fitness, mutaterate, sigma)
         generation += 1
 
-
+        if generation % 10 == 0:
+            print("Generation: {}\tMax Fitness: {}".format(generation, max(zip(*fitness)[0])))
+            output(population, generation)
 
 
 main()
