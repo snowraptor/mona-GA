@@ -79,15 +79,14 @@ def delta(test, reference):
 
 def pop_fitness(population, reference, max_fitness):
     fitness = {}
-
+    
     for index,individual in enumerate(population,0):
         fit = delta(map(ord,draw_DNA(individual).get_data()), reference)
-
         fit = 1 - (fit / max_fitness)
-
-        fitness[i] = fit
-
+        fitness[index] = fit
+    
     return fitness
+
 
 def crossover(parent1, parent2):
     cut = random.randint(0, len(parent1))
@@ -99,9 +98,7 @@ def crossover(parent1, parent2):
 
 def mate(population,fitness, mutaterate, sigma):
     roulette = sorted(fitness, key=fitness.get)
-
     sum_fitness = sum(fitness.values())
-
     newpop = [population[roulette[-1]]]
 
     while len(newpop) < len(population):
@@ -118,12 +115,12 @@ def mate(population,fitness, mutaterate, sigma):
 
         if random.random() < mutaterate:
             swap = random.randint(0, len(child), size = 2)
-
             child[swap[0]], child[swap[1]] = child[swap[1]], child[swap[0]]
 
         newpop.append(child)
 
     return newpop
+
 
 def output(pop, gen):
     individual = 0
