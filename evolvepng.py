@@ -78,13 +78,15 @@ def delta(test, reference):
     return sqrt(sum((test - reference) ** 2))
 
 def pop_fitness(population, reference, max_fitness):
-    i = 0
-    fitness = []
-    for individual in population:
+    fitness = {}
+
+    for index,individual in enumerate(population,0):
         fit = delta(map(ord,draw_DNA(individual).get_data()), reference)
+
         fit = 1 - (fit / max_fitness)
-        fitness.append([fit, i])
-        i += 1
+
+        fitness[i] = fit
+
     return fitness
 
 def crossover(parent1, parent2):
@@ -96,23 +98,31 @@ def crossover(parent1, parent2):
 
 
 def mate(population,fitness, mutaterate, sigma):
-    roulette = zip(*sorted(fitness, key=lambda fit: fit[0]))
-    sum_fitness = sum(roulette[0])
-    newpop = [population[roulette[1][-1]]]
+    roulette = sorted(fitness, key=fitness.get)
+
+    sum_fitness = sum(fitness.values())
+
+    newpop = [population[roulette[-1]]]
+
     while len(newpop) < len(population):
-        parents = random.choice(roulette[1],
+        parents = random.choice(roulette,
                                  size = 2,
                                  replace = False,
-                                 p = array(roulette[0])/sum_fitness)
+                                 p = map(lambda x: x/sum_fitness, fitness.values()))
+
         child = crossover(population[parents[0]], population[parents[1]])
+
         for i in range(len(child)):
             if random.random() < mutaterate:
                 child[i].mutate(sigma)
 
         if random.random() < mutaterate:
             swap = random.randint(0, len(child), size = 2)
+
             child[swap[0]], child[swap[1]] = child[swap[1]], child[swap[0]]
+
         newpop.append(child)
+
     return newpop
 
 def output(pop, gen):
