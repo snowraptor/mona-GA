@@ -30,15 +30,9 @@ class Gene():
     def mutate_shape(self, sigma):
         for i in range(len(self.vertices)):
             self.vertices[i][0] += sigma * random.randn() * self.imgshape[0]
-            if self.vertices[i][0] > self.imgshape[0]:
-                self.vertices[i][0] = self.imgshape[0]
-            if self.vertices[i][0] < 0:
-                self.vertices[i][0] = 0
+            self.vertices[i][0] = max(0, min(self.imgshape[0], self.vertices[i][0]))
             self.vertices[i][1] += sigma * random.randn() * self.imgshape[1]
-            if self.vertices[i][1] > self.imgshape[1]:
-                self.vertices[i][1] = self.imgshape[1]
-            if self.vertices[i][1] < 0:
-                self.vertices[i][1] = 0
+            self.vertices[i][1] = max(0, min(self.imgshape[1], self.vertices[i][1]))
 
 def read_png(pngfile):
     with open(pngfile, 'r') as png:
