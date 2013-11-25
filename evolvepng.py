@@ -80,7 +80,7 @@ def delta(test, reference):
 def pop_fitness(population, reference, max_fitness):
     fitness = {}
     
-    for index,individual in enumerate(population,0):
+    for index,individual in enumerate(population):
         fit = delta(map(ord,draw_DNA(individual).get_data()), reference)
         fit = 1 - (fit / max_fitness)
         fitness[index] = fit
