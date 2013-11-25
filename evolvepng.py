@@ -10,54 +10,73 @@ class Gene():
         self.imgshape = imgshape
         self.rgba = list(random.rand(4))
         self.vertices = []
+
         for vertex in range(numvertices):
             x = random.random_integers(0, imgshape[0])
             y = random.random_integers(0, imgshape[1])
-            self.vertices.append([x, y])
+            self.vertices.append((x, y))
+
+
     def mutate(self, sigma):
         if random.random() < 0.5:
             self.mutate_rgba(sigma)
         else:
             self.mutate_shape(sigma)
+
+
     def mutate_rgba(self, sigma):
-        self.rgba = sigma * random.randn(4) + self.rgba
-        highlights = self.rgba > 1.0
-        self.rgba[highlights] = 1.0
-        shadows = self.rgba < 0.0
-        self.rgba[shadows] = 0.0
-        if self.rgba[3] < 0.01:
-            self.rgba[3] += random.poisson(0.01)
+        self.rgba += sigma * sigma * random.randn(4)
+
+        self.rgba = map(lambda x: max(0, min(1, x)), self.rgba)
+
+
     def mutate_shape(self, sigma):
-        for i in range(len(self.vertices)):
-            self.vertices[i][0] += sigma * random.randn() * self.imgshape[0]
-            self.vertices[i][0] = max(0, min(self.imgshape[0], self.vertices[i][0]))
-            self.vertices[i][1] += sigma * random.randn() * self.imgshape[1]
-            self.vertices[i][1] = max(0, min(self.imgshape[1], self.vertices[i][1]))
+        for i,_ in enumerate(self.vertices):
+            new_vertex0 = self.vertices[i][0] + sigma * random.randn() * self.imgshape[0]
+            new_vertex0 = max(0, min(self.imgshape[0], new_vertex0))
+
+            new_vertex1 = self.vertices[i][1] + sigma * random.randn() * self.imgshape[1]
+            new_vertex1 = max(0, min(self.imgshape[1], new_vertex1))
+
+            self.vertices[i] = (new_vertex0, new_vertex1)
+
 
 def read_png(pngfile):
     with open(pngfile, 'r') as png:
         surface = cairo.ImageSurface.create_from_png(png)
+    
     if surface.get_format() != cairo.FORMAT_RGB24:
         raise TypeError
+    
     imgshape = [surface.get_width(), surface.get_height()]
+    
     return array(map(ord,surface.get_data())), imgshape
+
 
 def init_population(popsize, numshapes, numvertices, imgshape):
     population = []
+
     for i in range(popsize):
         dna = []
+
         for shape in range(numshapes):
             dna.append(Gene(numvertices, imgshape))
+
         population.append(dna)
+
     return population
+
 
 def draw_shape(gene, ctx):
     ctx.set_source_rgba(*gene.rgba) # Solid color
     ctx.set_line_width(0)
     ctx.move_to(*gene.vertices[0])
+
     for vertex in gene.vertices[1:]:
         ctx.line_to(*vertex)
+
     ctx.fill()
+
 
 def draw_DNA(dna):
     surface = cairo.ImageSurface(cairo.FORMAT_RGB24, dna[0].imgshape[0],  dna[0].imgshape[1])
@@ -75,12 +94,10 @@ def delta(test, reference):
 
 def pop_fitness(population, reference, max_fitness):
     fitness = {}
-
     for index,individual in enumerate(population):
         fit = delta(map(ord,draw_DNA(individual).get_data()), reference)
         fit = 1 - (fit / max_fitness)
         fitness[index] = fit
-
     return fitness
 
 
@@ -105,7 +122,7 @@ def mate(population,fitness, mutaterate, sigma):
 
         child = crossover(population[parents[0]], population[parents[1]])
 
-        for i in range(len(child)):
+        for i,_ in enumerate(child):
             if random.random() < mutaterate:
                 child[i].mutate(sigma)
 
