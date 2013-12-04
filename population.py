@@ -76,8 +76,8 @@ class Population:
 
         self.best_subject_ever.save("generation%05d.png" % generation)
 
-        print "best fitness ever: %.4f (generation %d)" % (self.best_fitness_ever, generation)
+        print("best fitness ever: {:.4f} (generation {:d})".format(self.best_fitness_ever, generation))
 
-      print "`-> current best fitness: %.4f (generation %d)" % (self.best_fitness_last_generation, generation)
+      print("`-> current best fitness: {:.4f} (generation {:d})".format(self.best_fitness_last_generation, generation))
 
       generation += 1
